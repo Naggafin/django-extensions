@@ -1,0 +1,14 @@
+{% load i18n list_filters %}
+{% if view.list_filters %}
+  <div id="list-filters">
+    <h2 >{% translate 'Filter' %}</h2>
+    {% if view.has_active_filters %}
+      <h3 id="list-filter-clear">
+        <a href="{{ view.clear_all_filters }}">&#10006; {% translate "Clear all filters" %}</a>
+      </h3>
+    {% endif %}
+    {% for spec in view.get_filter_specs %}
+      {% list_filter view spec %}
+    {% endfor %}
+  </div>
+{% endif %}

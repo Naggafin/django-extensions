@@ -1,0 +1,9 @@
+{% load i18n %}
+<div class="pagination-form">
+  {% block pagination-form %}
+  {% for field in form %}{% if field.label %}<label>{{ field.label }} {{ field }}</label>{% else %}{{ field }}{% endif %}{% endfor %}
+  {% endblock %}
+  {% block pagination-submit %}
+  <button type="submit" class="button" title="{% translate "Perform the desired pagination" %}">{% translate "Go" %}</button>
+  {% endblock %}
+</div>
