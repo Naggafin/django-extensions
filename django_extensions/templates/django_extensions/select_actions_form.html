@@ -11,20 +11,20 @@
     {% if actions_selection_counter %}
       {% with meta=model|meta %}
         <span class="action-counter" data-actions-icnt="{{ result_list|length }}">
-          {% blocktranslate with selected as selection_list|length with page_total as result_list|length %}
-            {{ selected }} of {{ page_total }} {{ meta.verbose_name_plural }} selected
+          {% blocktranslate with verbose_name_plural=meta.verbose_name_plural %}
+            {{ selection_count }} of {{ result_count }} {{ verbose_name_plural }} selected
           {% endblocktranslate %}
         </span>
-        {% if result_count != result_list|length %}
+        {% if result_count != total_count %}
         <span class="all hidden">
-          {% blocktranslate with result_count as total_count %}
+          {% blocktranslate %}
             All {{ total_count }} selected
           {% endblocktranslate %}
         </span>
         <span class="question hidden">
           <a href="#" title="{% translate "Click here to select the objects across all pages" %}">
-            {% blocktranslate with result_count as total_count %}
-              Select all {{ total_count }} {{ meta.verbose_name_plural }}
+            {% blocktranslate with verbose_name_plural=meta.verbose_name_plural %}
+              Select all {{ total_count }} {{ verbose_name_plural }}
             {% endblocktranslate %}
           </a>
         </span>

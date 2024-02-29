@@ -5,11 +5,7 @@ from functools import cache
 from django import forms
 from django.contrib import messages
 from django.contrib.admin import FieldListFilter, helpers
-from django.contrib.admin.options import (
-    IS_FACETS_VAR,
-    ModelAdmin,
-    ShowFacets,
-)
+from django.contrib.admin.options import IS_FACETS_VAR, ModelAdmin, ShowFacets
 from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.utils import get_fields_from_path, model_format_dict
 from django.contrib.admin.views.main import ChangeList
@@ -195,9 +191,7 @@ class SelectActionMixin(MultipleObjectMixin):
             if not select_across:
                 queryset = queryset.filter(pk__in=selected)
             elif not self.can_select_across(request, func):
-                msg = _(
-                    "This action requires a discrete selection of items."
-                )
+                msg = _("This action requires a discrete selection of items.")
                 messages.error(request, msg)
                 return None
 
@@ -225,16 +219,26 @@ class SelectActionMixin(MultipleObjectMixin):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         template = get_template(self.action_form_template)
+        results = (
+            context["page_obj"] if "page_obj" in context else context["object_list"]
+        )
+        selection = self.get_selection(results)
         context["action_form"] = template.render(
             {
                 "model": self.model,
                 "form": self.get_action_form(),
                 "actions_selection_counter": self.actions_selection_counter,
-                "selection_list": self.get_selection(
-                    context["page_obj"] or context["object_list"]
-                ),
-                "result_count": len(context["object_list"]),
-                "result_list": context["page_obj"] or context["object_list"],
+                "selection_list": selection,
+                "selection_count": selection.count()
+                if hasattr(selection, "count")
+                else len(selection),
+                "result_list": results,
+                "result_count": results.count()
+                if hasattr(results, "count")
+                else len(results),
+                "total_count": self.object_list.count()
+                if hasattr(self.object_list, "count")
+                else len(self.object_list),
             }
         )
         context["action_form_url"] = self.get_action_form_url(self.request)
