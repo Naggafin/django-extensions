@@ -11,7 +11,7 @@ from django.contrib.admin.utils import get_fields_from_path, model_format_dict
 from django.contrib.admin.views.main import ChangeList
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Field
+from django.db.models import Field, QuerySet
 from django.http import Http404
 from django.http.response import HttpResponseBase, HttpResponseRedirect
 from django.template.loader import get_template
@@ -230,14 +230,14 @@ class SelectActionMixin(MultipleObjectMixin):
                 "actions_selection_counter": self.actions_selection_counter,
                 "selection_list": selection,
                 "selection_count": selection.count()
-                if hasattr(selection, "count")
+                if isinstance(selection, QuerySet)
                 else len(selection),
                 "result_list": results,
                 "result_count": results.count()
-                if hasattr(results, "count")
+                if isinstance(results, QuerySet)
                 else len(results),
                 "total_count": self.object_list.count()
-                if hasattr(self.object_list, "count")
+                if isinstance(self.object_list, QuerySet)
                 else len(self.object_list),
             }
         )
