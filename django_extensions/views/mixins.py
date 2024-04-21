@@ -1,6 +1,5 @@
 import copy
 import itertools
-from functools import cache
 
 from django import forms
 from django.contrib import messages
@@ -15,6 +14,7 @@ from django.db.models import Field, QuerySet
 from django.http import Http404
 from django.http.response import HttpResponseBase, HttpResponseRedirect
 from django.template.loader import get_template
+from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.list import MultipleObjectMixin
@@ -135,7 +135,7 @@ class SelectActionMixin(MultipleObjectMixin):
         return action_form
 
     def get_action_form_url(self, request):
-        return self.get_query_string()
+        return request.path + self.get_query_string()
 
     def can_select_across(self, request, action):
         return getattr(action, "allow_select_across", False)
@@ -266,6 +266,12 @@ class ListFilterMixin(MultipleObjectMixin):
         super().setup(request, *args, **kwargs)
         self.params = dict(request.GET.items())
         self.filter_params = dict(request.GET.lists())
+        self.ignored_params = list(self.ignored_params or [])
+        # add page param to ignored, since it is very unlikely we
+        # desire it for filtration
+        if self.page_kwarg not in self.ignored_params:
+            self.ignored_params.append(self.page_kwarg)
+        # attach a model admin, since required for stock list filters
         if not hasattr(self, "model_admin"):
             self.model_admin = (
                 self.modeladmin_class(self.model, AdminSite())
@@ -277,19 +283,23 @@ class ListFilterMixin(MultipleObjectMixin):
             and IS_FACETS_VAR in request.GET
         )
 
+    @cached_property
     def has_active_filters(self):
-        filter_params = itertools.chain.from_iterable(
+        expected_params = itertools.chain.from_iterable(
             [filter.expected_parameters() for filter in self.get_filter_specs()]
         )
-        return any([param in filter_params for param in self.params])
+        return any(param in expected_params for param in self.get_filters_params())
 
     def get_filters_params(self, params=None):
-        params = params or self.params
-        lookup_params = params.copy()
-        lookup_params.pop(self.page_kwarg, None)
+        params = params or self.filter_params
+        lookup_params = params.copy()  # a dictionary of the query string
+        # Remove all the parameters that are globally and systematically
+        # ignored.
+        for ignored in self.ignored_params:
+            if ignored in lookup_params:
+                del lookup_params[ignored]
         return lookup_params
 
-    @cache
     def get_filter_specs(self):
         lookup_params = self.get_filters_params()
         filter_specs = []
@@ -343,6 +353,7 @@ class ListFilterMixin(MultipleObjectMixin):
         context = super().get_context_data(**kwargs)
         template = get_template(self.list_filters_template)
         context["list_filters"] = template.render({"view": self})
+        context["has_active_filters"] = self.has_active_filters
         return context
 
     get_query_string = ChangeList.get_query_string
@@ -401,7 +412,7 @@ class AdjustablePaginationMixin(MultipleObjectMixin):
         return form_class()
 
     def get_pagination_form_url(self, request):
-        return self.get_query_string(remove=[self.pagination_param])
+        return request.path + self.get_query_string(remove=[self.pagination_param])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
