@@ -16,6 +16,6 @@ class ModelUserFieldPermissionMixin(UserPassesTestMixin):
         elif hasattr(self, "get_object"):
             object = self.get_object()
         else:
-            self.get_queryset().first()
+            object = self.get_queryset().first()
 
         return current_user == getattr(object, model_attr)
