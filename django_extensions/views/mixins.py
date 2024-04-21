@@ -255,6 +255,8 @@ class ListFilterMixin(MultipleObjectMixin):
     list_filter_template = settings.LIST_FILTER_TEMPLATE
     list_filters_template = settings.LIST_FILTERS_TEMPLATE
     ignored_params = None
+    add_facets = None
+    pk_attname = "pk"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -278,10 +280,11 @@ class ListFilterMixin(MultipleObjectMixin):
                 if self.modeladmin_class
                 else ModelAdmin(self.model, AdminSite())
             )
-        self.add_facets = self.model_admin.show_facets is ShowFacets.ALWAYS or (
-            self.model_admin.show_facets is ShowFacets.ALLOW
-            and IS_FACETS_VAR in request.GET
-        )
+        if self.add_facets is None:
+            self.add_facets = self.model_admin.show_facets is ShowFacets.ALWAYS or (
+                self.model_admin.show_facets is ShowFacets.ALLOW
+                and IS_FACETS_VAR in request.GET
+            )
 
     @cached_property
     def has_active_filters(self):
@@ -342,11 +345,18 @@ class ListFilterMixin(MultipleObjectMixin):
         )
         return self.get_query_string(remove=filter_params)
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        filters = self.get_filter_specs()
-        for filter in filters:
-            queryset = filter.queryset(self.request, queryset)
+    def get_queryset(self, *args, request=None, exclude_parameters=None, **kwargs):
+        queryset = super().get_queryset(*args, **kwargs)
+        request = request or self.request
+        filter_specs = self.get_filter_specs()
+        for filter_spec in filter_specs:
+            if (
+                exclude_parameters is None
+                or filter_spec.expected_parameters() != exclude_parameters
+            ):
+                new_qs = filter_spec.queryset(request, queryset)
+                if new_qs is not None:
+                    queryset = new_qs
         return queryset
 
     def get_context_data(self, **kwargs):
