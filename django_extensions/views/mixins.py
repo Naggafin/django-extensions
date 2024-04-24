@@ -1,4 +1,5 @@
 import copy
+import inspect
 import itertools
 
 from django import forms
@@ -10,11 +11,12 @@ from django.contrib.admin.utils import get_fields_from_path, model_format_dict
 from django.contrib.admin.views.main import ChangeList
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Field, QuerySet
+from django.db.models import Field
 from django.http import Http404
 from django.http.response import HttpResponseBase, HttpResponseRedirect
 from django.template.loader import get_template
 from django.utils.functional import cached_property
+from django.utils.inspect import method_has_no_args
 from django.utils.translation import gettext_lazy as _
 from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.list import MultipleObjectMixin
@@ -220,7 +222,9 @@ class SelectActionMixin(MultipleObjectMixin):
         context = super().get_context_data(**kwargs)
         template = get_template(self.action_form_template)
         results = (
-            context["page_obj"] if "page_obj" in context else context["object_list"]
+            context["page_obj"].object_list
+            if "page_obj" in context
+            else self.object_list
         )
         selection = self.get_selection(results)
         context["action_form"] = template.render(
@@ -230,14 +234,23 @@ class SelectActionMixin(MultipleObjectMixin):
                 "actions_selection_counter": self.actions_selection_counter,
                 "selection_list": selection,
                 "selection_count": selection.count()
-                if isinstance(selection, QuerySet)
+                if hasattr(selection, "count")
+                and callable(selection.count)
+                and not inspect.isbuiltin(selection.count)
+                and method_has_no_args(selection.count)
                 else len(selection),
                 "result_list": results,
                 "result_count": results.count()
-                if isinstance(results, QuerySet)
+                if hasattr(results, "count")
+                and callable(results.count)
+                and not inspect.isbuiltin(results.count)
+                and method_has_no_args(results.count)
                 else len(results),
                 "total_count": self.object_list.count()
-                if isinstance(self.object_list, QuerySet)
+                if hasattr(self.object_list, "count")
+                and callable(self.object_list.count)
+                and not inspect.isbuiltin(self.object_list.count)
+                and method_has_no_args(self.object_list.count)
                 else len(self.object_list),
             }
         )
