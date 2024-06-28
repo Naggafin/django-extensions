@@ -54,6 +54,7 @@ class ActionException(Exception):
 class SelectActionMixin(MultipleObjectMixin):
     model = None
     actions = None
+    action_field = "pk"
     action_form = helpers.ActionForm
     action_form_template = settings.SELECT_ACTION_TEMPLATE
     action_selection_max = None
@@ -191,7 +192,8 @@ class SelectActionMixin(MultipleObjectMixin):
 
             # Perform the action
             if not select_across:
-                queryset = queryset.filter(pk__in=selected)
+            	lookup_kwarg = {f"{self.action_field}__in": selected}
+                queryset = queryset.filter(**lookup_kwarg)
             elif not self.can_select_across(request, func):
                 msg = _("This action requires a discrete selection of items.")
                 messages.error(request, msg)
@@ -223,35 +225,38 @@ class SelectActionMixin(MultipleObjectMixin):
         template = get_template(self.action_form_template)
         results = (
             context["page_obj"].object_list
-            if "page_obj" in context
+            if context.get("page_obj")
             else self.object_list
         )
         selection = self.get_selection(results)
+        total = (context["paginator"].object_list
+            if context.get("paginator")
+            else self.object_list)
         context["action_form"] = template.render(
             {
                 "model": self.model,
                 "form": self.get_action_form(),
                 "actions_selection_counter": self.actions_selection_counter,
                 "selection_list": selection,
-                "selection_count": selection.count()
+                "selection_count": (selection.count()
                 if hasattr(selection, "count")
                 and callable(selection.count)
                 and not inspect.isbuiltin(selection.count)
                 and method_has_no_args(selection.count)
-                else len(selection),
+                else len(selection)),
                 "result_list": results,
-                "result_count": results.count()
+                "result_count": (results.count()
                 if hasattr(results, "count")
                 and callable(results.count)
                 and not inspect.isbuiltin(results.count)
                 and method_has_no_args(results.count)
-                else len(results),
-                "total_count": self.object_list.count()
+                else len(results)),
+                "total_count": (self.object_list.count()
                 if hasattr(self.object_list, "count")
                 and callable(self.object_list.count)
                 and not inspect.isbuiltin(self.object_list.count)
                 and method_has_no_args(self.object_list.count)
-                else len(self.object_list),
+                else len(self.object_list)),
             }
         )
         context["action_form_url"] = self.get_action_form_url(self.request)
