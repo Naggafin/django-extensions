@@ -2,10 +2,11 @@ import copy
 import inspect
 import itertools
 
+import django
 from django import forms
 from django.contrib import messages
 from django.contrib.admin import FieldListFilter, helpers
-from django.contrib.admin.options import IS_FACETS_VAR, ModelAdmin, ShowFacets
+from django.contrib.admin.options import ModelAdmin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.utils import get_fields_from_path, model_format_dict
 from django.contrib.admin.views.main import ChangeList
@@ -22,6 +23,9 @@ from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.list import MultipleObjectMixin
 
 from .. import settings
+
+if int(django.get_version().split('.')[0]) >= 5:
+	from django.contrib.admin.options import IS_FACETS_VAR, ShowFacets
 
 
 def action(
